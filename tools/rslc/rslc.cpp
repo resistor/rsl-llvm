@@ -29,7 +29,6 @@ int main(int argc, char** argv) {
   }
 
   Lexer lex(srcBuff);
-  lex.computeLineNumbers();
   
   return 0;
 }
