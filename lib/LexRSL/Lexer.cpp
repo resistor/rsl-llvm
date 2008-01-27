@@ -10,12 +10,12 @@ void Lexer::computeLineNumbers() {
   // Line #1 starts at char 0.
   LineOffsets.push_back(0);
   
-  const unsigned char *Buf = (const unsigned char *)Buffer->getBufferStart();
-  const unsigned char *End = (const unsigned char *)Buffer->getBufferEnd();
+  const char *Buf = Buffer->getBufferStart();
+  const char *End = Buffer->getBufferEnd();
   unsigned Offs = 0;
   while (1) {
     // Skip over the contents of the line.
-    const unsigned char *NextBuf = (const unsigned char *)Buf;
+    const char *NextBuf = Buf;
     while (*NextBuf != '\n' && *NextBuf != '\r' && *NextBuf != '\0')
       ++NextBuf;
     Offs += NextBuf-Buf;
@@ -39,4 +39,137 @@ void Lexer::computeLineNumbers() {
   NumLines = LineOffsets.size();
   SourceLineCache = new size_t[LineOffsets.size()];
   std::copy(LineOffsets.begin(), LineOffsets.end(), SourceLineCache);
+}
+
+Token Lexer::peek(unsigned LookAhead) {
+  assert(LookAhead > 0 && "Can't have non-positive lookahead!");
+  
+  // If we've already lex'ed that far ahead, just return the token
+  // from the queue
+  if (LookAhead <= token_queue.size()) {
+    return token_queue[LookAhead-1];
+  
+  // Otherwise, we need to lex more tokens!
+  } else {
+    while (token_queue.size() < LookAhead)
+      token_queue.push_back(LexNextToken());
+    
+    return token_queue.back();
+  }
+}
+
+Token Lexer::LexNextToken() {
+  switch (*(Buffer->getBufferStart() + NextCharacter)) {
+  case '{':
+    return Token(Token::LBRACE, NextCharacter++, 1);
+  case '}':
+    return Token(Token::RBRACE, NextCharacter++, 1);
+  case '[':
+    return Token(Token::LBRACKET, NextCharacter++, 1);
+  case ']':
+    return Token(Token::RBRACKET, NextCharacter++, 1);
+  case '?':
+    return Token(Token::QUESTION, NextCharacter++, 1);
+  case ':':
+    return Token(Token::COLON, NextCharacter++, 1);
+  case ';':
+    return Token(Token::SEMI, NextCharacter++, 1);
+  case ',':
+    return Token(Token::COMMA, NextCharacter++, 1);
+  case '\0':
+    return Token(Token::ENDOFFILE, NextCharacter, 1);
+  case '\"':
+    return Token(Token::QUOTE, NextCharacter++, 1);
+  case '&':
+    NextCharacter++;
+    if (*(Buffer->getBufferStart() + NextCharacter) == '&')
+      return Token(Token::AMPAMP, (NextCharacter++)-1, 2);
+    else
+      return Token(Token::UNKNOWN, (NextCharacter++)-1, 2);
+  case '*':
+    NextCharacter++;
+    if (*(Buffer->getBufferStart() + NextCharacter) == '=')
+      return Token(Token::STAREQUAL, (NextCharacter++)-1, 2);
+    else
+      return Token(Token::STAR, (NextCharacter)-1, 1);
+  case '+':
+    NextCharacter++;
+    if (*(Buffer->getBufferStart() + NextCharacter) == '=')
+      return Token(Token::PLUSEQUAL, (NextCharacter++)-1, 2);
+    else
+      return Token(Token::PLUS, (NextCharacter)-1, 1);
+  case '-':
+    NextCharacter++;
+    if (*(Buffer->getBufferStart() + NextCharacter) == '=')
+      return Token(Token::MINUSEQUAL, (NextCharacter++)-1, 2);
+    else
+      return Token(Token::MINUS, (NextCharacter)-1, 1);
+  case '/':
+    NextCharacter++;
+    if (*(Buffer->getBufferStart() + NextCharacter) == '=')
+      return Token(Token::SLASHEQUAL, (NextCharacter++)-1, 2);
+    else
+      return Token(Token::SLASH, (NextCharacter)-1, 1);
+  case '!':
+    NextCharacter++;
+    if (*(Buffer->getBufferStart() + NextCharacter) == '=')
+      return Token(Token::EXLCAIMEQUAL, (NextCharacter++)-1, 2);
+    else
+      return Token(Token::EXCLAIM, (NextCharacter)-1, 1);
+  case '<':
+    NextCharacter++;
+    if (*(Buffer->getBufferStart() + NextCharacter) == '=')
+      return Token(Token::LESSEQUAL, (NextCharacter++)-1, 2);
+    else
+      return Token(Token::LESS, (NextCharacter)-1, 1);
+  case '>':
+    NextCharacter++;
+    if (*(Buffer->getBufferStart() + NextCharacter) == '=')
+      return Token(Token::GREATEREQUAL, (NextCharacter++)-1, 2);
+    else
+      return Token(Token::GREATER, (NextCharacter)-1, 1);
+  case '=':
+    NextCharacter++;
+    if (*(Buffer->getBufferStart() + NextCharacter) == '=')
+      return Token(Token::EQUALEQUAL, (NextCharacter++)-1, 2);
+    else
+      return Token(Token::EQUAL, (NextCharacter)-1, 1);
+  default:
+    char letter = *(Buffer->getBufferStart() + NextCharacter);
+    if ((letter >= 'a' && letter <= 'z') ||
+        (letter >= 'A' && letter <= 'Z') ||
+        letter == '_')
+      return LexKeywordOrIdentifier();
+    else if (letter >= '0' && letter <= '9')
+      return LexNumeric();
+    else
+      return Token(Token::UNKNOWN, NextCharacter++, 1);
+  }
+}
+
+Token Lexer::LexKeywordOrIdentifier() {
+  const char* Start = Buffer->getBufferStart() + NextCharacter;
+  const char* End = Start+1;
+  
+  while ((*End >= 'a' && *End <= 'z') ||
+         (*End >= 'A' && *End <= 'Z') ||
+         (*End >= '0' && *End <= '9') ||
+         *End == '_')
+    End++;
+  
+  Token::TokenType type = Token::IDENTIFIER;
+  
+  HashTableTy::iterator I = KeywordHashTable.find(Start, End);
+  if (I != KeywordHashTable.end())
+    type = I->getValue();
+  
+  unsigned size = End - Start;
+  size_t index = NextCharacter;
+  NextCharacter += size;
+  
+  return Token(type, index, size);
+}
+
+Token Lexer::LexNumeric() {
+  assert(0 && "Token not yet implemented!");
 }
