@@ -22,7 +22,8 @@ private:
 public:
   
   Lexer(const llvm::MemoryBuffer* buf) : Buffer(buf), NextCharacter(0),
-                                         SourceLineCache(0), NumLines(0) {
+                                         SourceLineCache(0), NumLines(0),
+                                         KeywordHashTable(32) {
     const char* kw_for = "for";
     KeywordHashTable.GetOrCreateValue(kw_for, kw_for+3).setValue(Token::FOR);
     
