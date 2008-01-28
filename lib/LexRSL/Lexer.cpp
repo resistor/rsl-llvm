@@ -171,5 +171,25 @@ Token Lexer::LexKeywordOrIdentifier() {
 }
 
 Token Lexer::LexNumeric() {
-  assert(0 && "Token not yet implemented!");
+  const char* Start = Buffer->getBufferStart() + NextCharacter;
+  const char* End = Start+1;
+  
+  while ((*End >= '0' && *End <= '9') ||
+         *End == '.')
+    End++;
+  
+  // 1e+12
+  if ((*End == '+' || *End == '-') && (*(End+1) == 'E' || *(End+1) == 'e')) {
+    End += 2;
+    
+    while ((*End >= '0' && *End <= '9') ||
+           *End == '.')
+      End++;
+  }
+  
+  unsigned size = End - Start;
+  size_t index = NextCharacter;
+  NextCharacter += size;
+  
+  return Token(Token::NUMERIC, index, size);
 }
