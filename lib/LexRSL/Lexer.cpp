@@ -86,8 +86,11 @@ Token Lexer::LexNextToken() {
     NextCharacter++;
     if (*(Buffer->getBufferStart() + NextCharacter) == '&')
       return Token(Token::AMPAMP, (NextCharacter++)-1, 2);
-    else
-      return Token(Token::UNKNOWN, (NextCharacter++)-1, 2);
+    else {
+      const char* Location = Buffer->getBufferStart() + NextCharacter;
+      return Token(Token::UNKNOWN, (NextCharacter++)-1, 2,
+                   SpellingPool.intern(Location, Location+2));
+    }
   case '*':
     NextCharacter++;
     if (*(Buffer->getBufferStart() + NextCharacter) == '=')
@@ -144,8 +147,11 @@ Token Lexer::LexNextToken() {
       return LexKeywordOrIdentifier();
     else if (letter >= '0' && letter <= '9')
       return LexNumeric();
-    else
-      return Token(Token::UNKNOWN, NextCharacter++, 1);
+    else {
+      const char* Location = Buffer->getBufferStart() + NextCharacter;
+      return Token(Token::UNKNOWN, NextCharacter++, 1,
+                   SpellingPool.intern(Location, Location+1));
+    }
   }
 }
 
@@ -176,16 +182,35 @@ Token Lexer::LexNumeric() {
   const char* Start = Buffer->getBufferStart() + NextCharacter;
   const char* End = Start+1;
   
+  Token::TokenType type = Token::NUMERIC;
+  
+  bool sawPeriod = false;
   while ((*End >= '0' && *End <= '9') ||
-         *End == '.')
+         *End == '.') {
+    if (*End == '.')
+      if (sawPeriod) {
+        type = Token::UNKNOWN;
+      } else {
+        sawPeriod = true;
+      }
+    
     End++;
+  }
   
   // 1e+12
   if ((*End == '+' || *End == '-') && (*(End+1) == 'E' || *(End+1) == 'e')) {
     End += 2;
     
+    sawPeriod = false;
     while ((*End >= '0' && *End <= '9') ||
            *End == '.')
+      if (*End == '.')
+        if (sawPeriod) {
+          type = Token::UNKNOWN;
+        } else {
+          sawPeriod = true;
+        }
+      
       End++;
   }
   

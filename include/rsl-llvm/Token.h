@@ -1,3 +1,4 @@
+#include "llvm/Support/StringPool.h"
 #include <cstddef>
 
 #ifndef RSL_TOKEN_H
@@ -86,7 +87,14 @@ struct Token {
   size_t index;
   unsigned length;
   
-  Token(TokenType t, size_t i, unsigned l) : type(t), index(i), length(l) { }
+  // Only used for identifiers, unknowns, and numeric constants
+  llvm::PooledStringPtr spelling;
+  
+  Token(TokenType t, size_t i, unsigned l) : type(t), index(i),
+                                             spelling(), length(l) { }
+  
+  Token(TokenType t, size_t i, unsigned l, const llvm::PooledStringPtr& sp) :
+        type(t), index(i), spelling(sp), length(l) { }
 };
 
 #endif
