@@ -2,6 +2,8 @@
 #include <vector>
 #include <algorithm>
 
+static llvm::StringPool SpellingPool;
+
 void Lexer::computeLineNumbers() {
   // Find the file offsets of all of the *physical* source lines.  This does
   // not look at trigraphs, escaped newlines, or anything else tricky.
@@ -167,7 +169,7 @@ Token Lexer::LexKeywordOrIdentifier() {
   size_t index = NextCharacter;
   NextCharacter += size;
   
-  return Token(type, index, size);
+  return Token(type, index, size, SpellingPool.intern(Start, End));
 }
 
 Token Lexer::LexNumeric() {
@@ -191,5 +193,5 @@ Token Lexer::LexNumeric() {
   size_t index = NextCharacter;
   NextCharacter += size;
   
-  return Token(Token::NUMERIC, index, size);
+  return Token(Token::NUMERIC, index, size, SpellingPool.intern(Start, End));
 }
