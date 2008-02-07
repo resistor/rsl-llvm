@@ -30,15 +30,8 @@ env['CXXFLAGS'] += ["-O0","-g"]
 def isCPPFile(f):
   return f.endswith('.cpp')
 
-lexfiles = filter(isCPPFile, ["lib/LexRSL/" + i for i in os.listdir('lib/LexRSL')])
-parsefiles = filter(isCPPFile, ["lib/ParseRSL/" + i for i in os.listdir('lib/ParseRSL')])
-semafiles = filter(isCPPFile, ["lib/SemaRSL/" + i for i in os.listdir('lib/SemaRSL')])
-codegenfiles = filter(isCPPFile, ["lib/CodegenRSL/" + i for i in os.listdir('lib/CodegenRSL')])
-
-env.StaticLibrary('lib/LexRSL', lexfiles)
-#env.StaticLibrary('lib/ParseRSL', parsefiles)
-#env.StaticLibrary('lib/SemaRSL', semafiles)
-#env.StaticLibrary('lib/CodegenRSL', codegenfiles)
+libfiles = filter(isCPPFile, ["lib/" + i for i in os.listdir('lib/')])
+env.StaticLibrary('lib/RslLLVM', libfiles)
 
 
 corelinkcall = subprocess.Popen('llvm-config --libs core', shell=True, stdout=subprocess.PIPE)
@@ -49,4 +42,4 @@ corelinkflags = corelinkcall.communicate()[0].rstrip('\n').split(' ')
 rslcfiles = filter(isCPPFile, ["tools/rslc/" + i for i in os.listdir('tools/rslc')])
 
 env["LINKFLAGS"].extend(corelinkflags)
-env.Program('rslc', rslcfiles, LIBS=['LexRSL'], LIBPATH='lib', )
+env.Program('rslc', rslcfiles, LIBS=['RslLLVM'], LIBPATH='lib', )
