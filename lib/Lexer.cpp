@@ -60,6 +60,16 @@ Token Lexer::peek(unsigned LookAhead) {
   }
 }
 
+void Lexer::consume(Token::TokenType t) {
+  if (token_queue.size()) {
+    assert(token_queue.front().type == t && "Unexpected token encountered!");
+    token_queue.pop_front();
+  } else {
+    Token tok = LexNextToken();
+    assert(tok.type == t && "Unexpected token encountered!");
+  }
+}
+
 Token Lexer::LexNextToken() {
   switch (*(Buffer->getBufferStart() + NextCharacter)) {
   case '{':
