@@ -123,7 +123,7 @@ public:
   }
   
   Token peek(unsigned LookAhead = 1);
-  void consume(Token::TokenType t);
+  Token consume(Token::TokenType t);
 
 private:
   Token LexNextToken();
