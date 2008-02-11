@@ -14,6 +14,8 @@ private:
   void parseDefinitions();
   void parseFunctionDefinition();
   void parseShaderDefinition();
+  void parseFormals();
+  void parseStatements();
 };
 
 #endif

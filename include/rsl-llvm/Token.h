@@ -36,6 +36,8 @@ struct Token {
     LBRACKET,      // [
     RBRACKET,      // ]
     QUOTE,         // "
+    CARET,         // ^
+    DOT,           // .
     
     // Keywords
     FOR,

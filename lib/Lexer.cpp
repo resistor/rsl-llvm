@@ -60,6 +60,17 @@ Token Lexer::peek(unsigned LookAhead) {
   }
 }
 
+Token Lexer::consume() {
+  if (token_queue.size()) {
+    Token tok = token_queue.front();
+    token_queue.pop_front();
+    return tok;
+  } else {
+    Token tok = LexNextToken();
+    return tok;
+  }
+}
+
 Token Lexer::consume(Token::TokenType t) {
   if (token_queue.size()) {
     Token tok = token_queue.front();
@@ -95,6 +106,10 @@ Token Lexer::LexNextToken() {
     return Token(Token::ENDOFFILE, NextCharacter, 1);
   case '\"':
     return Token(Token::QUOTE, NextCharacter++, 1);
+  case '.':
+    return Token(Token::DOT, NextCharacter++, 1);
+  case '^':
+    return Token(Token::CARET, NextCharacter++, 1);
   case '&':
     NextCharacter++;
     if (*(Buffer->getBufferStart() + NextCharacter) == '&')

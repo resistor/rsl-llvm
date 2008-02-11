@@ -124,6 +124,7 @@ public:
   
   Token peek(unsigned LookAhead = 1);
   Token consume(Token::TokenType t);
+  Token consume();
 
 private:
   Token LexNextToken();
