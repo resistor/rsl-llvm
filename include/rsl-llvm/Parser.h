@@ -15,7 +15,19 @@ private:
   void parseFunctionDefinition();
   void parseShaderDefinition();
   void parseFormals();
+  
   void parseStatements();
+  void parseStatement();
+  
+  void parseReturnStmt();
+  void parseBreakStmt();
+  void parseContinueStmt();
+  
+  void parseWhileLoop();
+  void parseForLoop();
+  
+  void parseExpression();
+  void parseRelation();
 };
 
 #endif

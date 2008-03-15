@@ -70,3 +70,82 @@ void Parser::parseFunctionDefinition() {
   parseStatements();
   lex.consume(Token::RBRACE);
 }
+
+void Parser::parseStatements() {
+  Token t = lex.peek();
+  
+  while (true) {
+    switch (t.type) {
+      case Token::IDENTIFIER:
+      case Token::SEMI:
+      case Token::IF:
+        parseStatement();
+        break;
+      case Token::FOR:
+        parseForLoop();
+        break;
+      case Token::WHILE:
+        parseWhileLoop();
+        break;
+      case Token::BREAK:
+        parseBreakStmt();
+        break;
+      case Token::CONTINUE:
+        parseContinueStmt();
+        break;
+      case Token::RETURN:
+        parseReturnStmt();
+        break;
+      default:
+        return;
+    }
+  }
+}
+
+void Parser::parseReturnStmt() {
+  lex.consume(Token::RETURN);
+  parseExpression();
+  lex.consume(Token::SEMI);
+}
+
+void Parser::parseContinueStmt() {
+  lex.consume(Token::CONTINUE);
+  if (lex.peek().type == Token::NUMERIC)
+    lex.consume(Token::NUMERIC);
+  lex.consume(Token::SEMI);
+}
+
+void Parser::parseBreakStmt() {
+  lex.consume(Token::BREAK);
+  if (lex.peek().type == Token::NUMERIC)
+    lex.consume(Token::NUMERIC);
+  lex.consume(Token::SEMI);
+}
+
+void Parser::parseWhileLoop() {
+  lex.consume(Token::WHILE);
+  parseRelation();
+  lex.consume(Token::LBRACE);
+  parseStatements();
+  lex.consume(Token::RBRACE);
+}
+
+void Parser::parseForLoop() {
+  lex.consume(Token::FOR);
+  lex.consume(Token::LPAREN);
+  parseExpression();
+  lex.consume(Token::SEMI);
+  parseRelation();
+  lex.consume(Token::SEMI);
+  parseExpression();
+  lex.consume(Token::RPAREN);
+  
+  Token t = lex.peek();
+  if (t.type == Token::LBRACE) {
+    lex.consume(Token::LBRACE);
+    parseStatements();
+    lex.consume(Token::RBRACE);
+  } else {
+    // FIXME: Parse single statement here.
+  }
+}
