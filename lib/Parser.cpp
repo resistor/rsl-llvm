@@ -124,10 +124,19 @@ void Parser::parseBreakStmt() {
 
 void Parser::parseWhileLoop() {
   lex.consume(Token::WHILE);
+  
+  lex.consume(Token::LPAREN);
   parseRelation();
-  lex.consume(Token::LBRACE);
-  parseStatements();
-  lex.consume(Token::RBRACE);
+  lex.consume(Token::RPAREN);
+  
+  Token t = lex.peek();
+  if (t.type == Token::LBRACE) {
+    lex.consume(Token::LBRACE);
+    parseStatements();
+    lex.consume(Token::RBRACE);
+  } else {
+    // FIXME: Parse single statement here.
+  }
 }
 
 void Parser::parseForLoop() {
