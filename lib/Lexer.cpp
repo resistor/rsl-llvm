@@ -85,6 +85,11 @@ Token Lexer::consume(Token::TokenType t) {
 }
 
 Token Lexer::LexNextToken() {
+  while (*(Buffer->getBufferStart() + NextCharacter) == ' ' ||
+         *(Buffer->getBufferStart() + NextCharacter) == '\n' ||
+         *(Buffer->getBufferStart() + NextCharacter) == '\t')
+    NextCharacter++;
+  
   switch (*(Buffer->getBufferStart() + NextCharacter)) {
   case '{':
     return Token(Token::LBRACE, NextCharacter++, 1);
@@ -94,6 +99,10 @@ Token Lexer::LexNextToken() {
     return Token(Token::LBRACKET, NextCharacter++, 1);
   case ']':
     return Token(Token::RBRACKET, NextCharacter++, 1);
+  case '(':
+    return Token(Token::LPAREN, NextCharacter++, 1);
+  case ')':
+    return Token(Token::RPAREN, NextCharacter++, 1);
   case '?':
     return Token(Token::QUESTION, NextCharacter++, 1);
   case ':':
