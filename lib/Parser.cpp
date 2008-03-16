@@ -135,7 +135,30 @@ void Parser::parseWhileLoop() {
     parseStatements();
     lex.consume(Token::RBRACE);
   } else {
-    // FIXME: Parse single statement here.
+    switch (t.type) {
+      case Token::IDENTIFIER:
+      case Token::SEMI:
+      case Token::IF:
+        parseStatement();
+        break;
+      case Token::FOR:
+        parseForLoop();
+        break;
+      case Token::WHILE:
+        parseWhileLoop();
+        break;
+      case Token::BREAK:
+        parseBreakStmt();
+        break;
+      case Token::CONTINUE:
+        parseContinueStmt();
+        break;
+      case Token::RETURN:
+        parseReturnStmt();
+        break;
+      default:
+        assert("Expected a statement!");
+    }
   }
 }
 
@@ -155,6 +178,29 @@ void Parser::parseForLoop() {
     parseStatements();
     lex.consume(Token::RBRACE);
   } else {
-    // FIXME: Parse single statement here.
+    switch (t.type) {
+      case Token::IDENTIFIER:
+      case Token::SEMI:
+      case Token::IF:
+        parseStatement();
+        break;
+      case Token::FOR:
+        parseForLoop();
+        break;
+      case Token::WHILE:
+        parseWhileLoop();
+        break;
+      case Token::BREAK:
+        parseBreakStmt();
+        break;
+      case Token::CONTINUE:
+        parseContinueStmt();
+        break;
+      case Token::RETURN:
+        parseReturnStmt();
+        break;
+      default:
+        assert("Expected a statement!");
+    }
   }
 }
