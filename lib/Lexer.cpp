@@ -231,7 +231,7 @@ Token Lexer::LexNumeric() {
     
     sawPeriod = false;
     while ((*End >= '0' && *End <= '9') ||
-           *End == '.')
+           *End == '.') {
       if (*End == '.')
         if (sawPeriod) {
           type = Token::UNKNOWN;
@@ -240,6 +240,7 @@ Token Lexer::LexNumeric() {
         }
       
       End++;
+    }
   }
   
   unsigned size = End - Start;
