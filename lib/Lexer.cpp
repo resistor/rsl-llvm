@@ -90,6 +90,8 @@ Token Lexer::LexNextToken() {
          *(Buffer->getBufferStart() + NextCharacter) == '\t')
     NextCharacter++;
   
+  unsigned start = 0;
+  
   switch (*(Buffer->getBufferStart() + NextCharacter)) {
   case '{':
     return Token(Token::LBRACE, NextCharacter++, 1);
@@ -113,8 +115,6 @@ Token Lexer::LexNextToken() {
     return Token(Token::COMMA, NextCharacter++, 1);
   case '\0':
     return Token(Token::ENDOFFILE, NextCharacter, 1);
-  case '\"':
-    return Token(Token::QUOTE, NextCharacter++, 1);
   case '.':
     return Token(Token::DOT, NextCharacter++, 1);
   case '^':
@@ -176,6 +176,12 @@ Token Lexer::LexNextToken() {
       return Token(Token::EQUALEQUAL, (NextCharacter++)-1, 2);
     else
       return Token(Token::EQUAL, (NextCharacter)-1, 1);
+  case '"':
+    start = NextCharacter++;
+    while (*(Buffer->getBufferStart() + NextCharacter) != '"')
+      NextCharacter++;
+    
+    return Token(Token::STRINGCONSTANT, start, ++NextCharacter - start);    
   default:
     char letter = *(Buffer->getBufferStart() + NextCharacter);
     if ((letter >= 'a' && letter <= 'z') ||

@@ -35,7 +35,6 @@ struct Token {
     RBRACE,        // }
     LBRACKET,      // [
     RBRACKET,      // ]
-    QUOTE,         // "
     CARET,         // ^
     DOT,           // .
     
@@ -80,6 +79,7 @@ struct Token {
     
     NUMERIC,
     IDENTIFIER,
+    STRINGCONSTANT,
     ENDOFFILE,
     
     UNKNOWN
