@@ -155,7 +155,7 @@ Token Lexer::LexNextToken() {
   case '!':
     NextCharacter++;
     if (*(Buffer->getBufferStart() + NextCharacter) == '=')
-      return Token(Token::EXLCAIMEQUAL, (NextCharacter++)-1, 2);
+      return Token(Token::EXCLAIMEQUAL, (NextCharacter++)-1, 2);
     else
       return Token(Token::EXCLAIM, (NextCharacter)-1, 1);
   case '<':
