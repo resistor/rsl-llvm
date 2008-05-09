@@ -15,6 +15,7 @@ private:
   void parseFunctionDefinition();
   void parseShaderDefinition();
   void parseFormals();
+  void parseFormalVariableDef();
   
   void parseStatements();
   void parseStatement();

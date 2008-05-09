@@ -116,7 +116,11 @@ Token Lexer::LexNextToken() {
   case '\0':
     return Token(Token::ENDOFFILE, NextCharacter, 1);
   case '.':
-    return Token(Token::DOT, NextCharacter++, 1);
+    if (*(Buffer->getBufferStart() + NextCharacter + 1) >= '0' &&
+       (*(Buffer->getBufferStart() + NextCharacter + 1) <= '9')) {
+      return LexNumeric();
+    } else
+      return Token(Token::DOT, NextCharacter++, 1);
   case '^':
     return Token(Token::CARET, NextCharacter++, 1);
   case '&':
@@ -183,7 +187,7 @@ Token Lexer::LexNextToken() {
     
     return Token(Token::STRINGCONSTANT, start, ++NextCharacter - start);    
   default:
-    char letter = *(Buffer->getBufferStart() + NextCharacter);
+    unsigned char letter = *(Buffer->getBufferStart() + NextCharacter);
     if ((letter >= 'a' && letter <= 'z') ||
         (letter >= 'A' && letter <= 'Z') ||
         letter == '_')

@@ -32,7 +32,51 @@ void Parser::parseDefinitions() {
 }
 
 void Parser::parseFormals() {
-  // FIXME: Implement parameters!
+  Token t = lex.peek();
+  
+  if (t.type != Token::RPAREN) {
+    parseFormalVariableDef();
+    lex.consume(Token::SEMI);
+    
+    t = lex.peek();
+  
+    while (t.type != Token::RPAREN) {
+      parseFormalVariableDef();
+      lex.consume(Token::SEMI);
+      t = lex.peek();
+    }
+  }
+}
+
+void Parser::parseFormalVariableDef() {
+  Token t = lex.peek();
+  
+  if (t.type == Token::OUTPUT) {
+    lex.consume(Token::OUTPUT);
+    t = lex.peek();
+  }
+  
+  if (t.type == Token::VARYING || t.type == Token::UNIFORM) {
+    lex.consume();
+    t = lex.peek();
+  }
+  
+  switch (t.type) {
+    case Token::FLOAT:
+    case Token::STRING:
+    case Token::COLOR:
+    case Token::POINT:
+    case Token::VECTOR:
+    case Token::NORMAL:
+    case Token::MATRIX:
+    case Token::VOID:
+      lex.consume();
+      break;
+    default:
+      assert(0 && "Invalid type!");
+  }
+  
+  parseDefExpressions();
 }
 
 void Parser::parseShaderDefinition() {
@@ -87,6 +131,8 @@ void Parser::parseStatements() {
       case Token::VECTOR:
       case Token::NORMAL:
       case Token::MATRIX:
+      case Token::UNIFORM:
+      case Token::VARYING:
         parseVariableDecl();
         break;
       case Token::IDENTIFIER:
@@ -159,6 +205,7 @@ void Parser::parseVariableDecl() {
 }
 
 void Parser::parseAssignmentStmt() {
+  parseConditionalExpr();
   parseAssignmentExpr();
   lex.consume(Token::SEMI);
 }
@@ -320,7 +367,7 @@ void Parser::parseCallExpr() {
   lex.consume(Token::RPAREN);
 }
 
-void Parser::parseAssignmentExpr() {  
+void Parser::parseAssignmentExpr() {
   Token t = lex.peek();
   switch (t.type) {
     case Token::EQUAL:
@@ -347,10 +394,10 @@ void Parser::parseExpression() {
     case Token::MINUSEQUAL:
     case Token::STAREQUAL:
     case Token::SLASHEQUAL:
-      parseAssignmentExpr();
-      break;
+      lex.consume();
+      parseExpression();
     default:
-      assert(0 && "Expected assignment operator!");
+      break;
   }
 }
 
@@ -360,9 +407,9 @@ void Parser::parseConditionalExpr() {
   Token t = lex.peek();
   if (t.type == Token::QUESTION) {
     lex.consume(Token::QUESTION);
-    parseExpression();
+    parseConditionalExpr();
     lex.consume(Token::COLON);
-    parseExpression();
+    parseConditionalExpr();
   }
 }
 
@@ -372,7 +419,7 @@ void Parser::parseOrExpr() {
   Token t = lex.peek();
   if (t.type == Token::PIPEPIPE) {
     lex.consume(Token::PIPEPIPE);
-    parseAndExpr();
+    parseOrExpr();
   }
 }
 
@@ -382,7 +429,7 @@ void Parser::parseAndExpr() {
   Token t = lex.peek();
   if (t.type == Token::AMPAMP) {
     lex.consume(Token::AMPAMP);
-    parseEqualityExpr();
+    parseAndExpr();
   }
 }
 
@@ -392,7 +439,7 @@ void Parser::parseEqualityExpr() {
   Token t = lex.peek();
   if (t.type == Token::EQUALEQUAL || t.type == Token::EXCLAIMEQUAL) {
     lex.consume();
-    parseCmpExpr();
+    parseEqualityExpr();
   }
 }
 
@@ -403,7 +450,7 @@ void Parser::parseCmpExpr() {
   if (t.type == Token::GREATER || t.type == Token::GREATEREQUAL ||
       t.type == Token::LESS || t.type == Token::LESSEQUAL) {
     lex.consume();
-    parseMulExpr();
+    parseCmpExpr();
   }
 }
 
@@ -413,7 +460,7 @@ void Parser::parseAddExpr() {
   Token t = lex.peek();
   if (t.type == Token::PLUS || t.type == Token::MINUS) {
     lex.consume();
-    parsePowExpr();
+    parseAddExpr();
   }
 }
 
@@ -423,7 +470,7 @@ void Parser::parsePowExpr() {
   Token t = lex.peek();
   if (t.type == Token::CARET) {
     lex.consume(Token::CARET);
-    parseMulExpr();
+    parsePowExpr();
   }
 }
 
@@ -433,7 +480,7 @@ void Parser::parseMulExpr() {
   Token t = lex.peek();
   if (t.type == Token::STAR || t.type == Token::SLASH) {
     lex.consume();
-    parseDotExpr();
+    parseMulExpr();
   }
 }
 
@@ -443,7 +490,7 @@ void Parser::parseDotExpr() {
   Token t = lex.peek();
   if (t.type == Token::DOT) {
     lex.consume(Token::DOT);
-    parseUnaryExpr();
+    parseDotExpr();
   }
 }
 
@@ -458,8 +505,18 @@ void Parser::parseUnaryExpr() {
 
 void Parser::parseCastExpr() {
   Token t = lex.peek();
-  if (t.type == Token::LPAREN)
-    parseTypecast();
+  switch(t.type) {
+    case Token::FLOAT:
+    case Token::STRING:
+    case Token::COLOR:
+    case Token::POINT:
+    case Token::VECTOR:
+    case Token::NORMAL:
+    case Token::MATRIX:
+      parseTypecast();
+    default:
+      break;
+  }
   
   parsePrimary();
 }
@@ -471,6 +528,7 @@ void Parser::parseExpressionList() {
   while (t.type == Token::COMMA) {
     lex.consume(Token::COMMA);
     parseExpression();
+    t = lex.peek();
   }
 }
 
@@ -482,6 +540,9 @@ void Parser::parsePrimary() {
     case Token::NUMERIC:
       lex.consume(Token::NUMERIC);
       break;
+    case Token::STRINGCONSTANT:
+      lex.consume(Token::STRINGCONSTANT);
+      break;
     case Token::TEXTURE:
     case Token::ENVIRONMENT:
     case Token::SHADOW:
@@ -491,7 +552,7 @@ void Parser::parsePrimary() {
       t2 = lex.peek(3);
       
       if (t2.type == Token::COMMA) {
-        t2 = lex.peek(6);
+        t2 = lex.peek(7);
         
         if (t2.type == Token::RPAREN)
           parseTuple(3);
@@ -509,8 +570,6 @@ void Parser::parsePrimary() {
         parseCallExpr();
       else if (t2.type == Token::LBRACKET)
         parseArrayExpr();
-      else if (t2.type == Token::EQUAL)
-        parseAssignmentExpr();
       else
         lex.consume(Token::IDENTIFIER);
       break;
@@ -541,6 +600,8 @@ void Parser::parseTexture() {
   t = lex.peek();
   if (t.type == Token::COMMA)
     parseTextureArguments();
+  
+  lex.consume(Token::RPAREN);
 }
 
 void Parser::parseTextureType() {
@@ -580,8 +641,6 @@ void Parser::parseTuple(unsigned num) {
 }
 
 void Parser::parseTypecast() {
-  lex.consume(Token::LPAREN);
-  
   Token t = lex.peek();
   
   switch (t.type) {
@@ -601,6 +660,4 @@ void Parser::parseTypecast() {
     default:
       assert(0 && "Invalid typecast!");
   }
-  
-  lex.consume(Token::RPAREN);
 }
