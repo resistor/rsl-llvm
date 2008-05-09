@@ -17,7 +17,7 @@ struct Token {
     MINUS,        // -
     MINUSEQUAL,   // -=
     EXCLAIM,      // !
-    EXLCAIMEQUAL, // !=
+    EXCLAIMEQUAL, // !=
     EQUAL,        // =
     EQUALEQUAL,   // ==
     SLASH,        // /
