@@ -268,3 +268,4 @@ Token Lexer::LexNumeric() {
   
   return Token(Token::NUMERIC, index, size, SpellingPool.intern(Start, End));
 }
+

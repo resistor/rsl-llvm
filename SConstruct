@@ -1,14 +1,22 @@
 import os, subprocess, SCons.Util
 
+def filterAndStripPrefix(list, prefix):
+  return [i[len(prefix):] for i in filter(lambda s: s.startswith(prefix), list)]
+
+def filterNotPrefix(list, prefix):
+  return filter(lambda s: not s.startswith(prefix), list)
+
+
 cppflagscall = subprocess.Popen('llvm-config --cppflags', shell=True, stdout=subprocess.PIPE)
 llvmcppflags = cppflagscall.communicate()[0].rstrip('\n').split(' ')
 
 ldflagscall = subprocess.Popen('llvm-config --ldflags', shell=True, stdout=subprocess.PIPE)
 llvmldflags = ldflagscall.communicate()[0].rstrip('\n').split(' ')
 
-env = Environment(CPPPATH = [ 'include' ],
-                  CXXFLAGS = llvmcppflags,
-                  LINKFLAGS = llvmldflags)
+env = Environment(CPPPATH = [ 'include' ] + filterAndStripPrefix(llvmcppflags, '-I'),
+                  CXXFLAGS = filterNotPrefix(llvmcppflags, '-I'),
+                  LIBPATHS = filterAndStripPrefix(llvmldflags, '-L'),
+                  LIBS = filterAndStripPrefix(llvmldflags, '-l'))
 
 if os.environ.has_key('CC'):
   env['CC'] = os.environ['CC']
@@ -36,10 +44,9 @@ env.StaticLibrary('lib/RslLLVM', libfiles)
 
 corelinkcall = subprocess.Popen('llvm-config --libs core', shell=True, stdout=subprocess.PIPE)
 corelinkflags = corelinkcall.communicate()[0].rstrip('\n').split(' ')
-#corelinkflags = [i[2:] for i in corelinkflags]
-#print corelinkflags
 
 rslcfiles = filter(isCPPFile, ["tools/rslc/" + i for i in os.listdir('tools/rslc')])
 
-env["LINKFLAGS"].extend(corelinkflags)
-env.Program('rslc', rslcfiles, LIBS=['RslLLVM'], LIBPATH='lib', )
+env.Program('rslc', rslcfiles,
+            LIBS=env['LIBS'] + ['RslLLVM'] + filterAndStripPrefix(corelinkflags, '-l'),
+            LIBPATH=env['LIBPATHS'] + ['lib'])
