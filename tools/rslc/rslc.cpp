@@ -1,4 +1,5 @@
 #include "rsl-llvm/Lexer.h"
+#include "rsl-llvm/Parser.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -29,6 +30,10 @@ int main(int argc, char** argv) {
   }
 
   Lexer lex(srcBuff);
+  Parser parse(lex);
+  parse.parseDefinitions();
   
   return 0;
 }
+
+
