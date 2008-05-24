@@ -34,29 +34,25 @@ void Parser::parseDefinitions() {
 void Parser::parseFormals() {
   Token t = lex.peek();
   
-  if (t.type != Token::RPAREN) {
-    parseFormalVariableDef();
-    
-    if (lex.peek().type == Token::SEMI || lex.peek().type == Token::COMMA) {
-      lex.consume();
+  if (t.type != Token::RPAREN)
+    while (1) {
+      parseFormalType();
+      parseDefExpressions();
     
       t = lex.peek();
-  
-      while (t.type != Token::RPAREN) {
-        parseFormalVariableDef();
-        
-        if (lex.peek().type == Token::SEMI || lex.peek().type == Token::COMMA) {
-          lex.consume();
-          t = lex.peek();
-        } else {
-          break;
-        }
-      }
+      
+      if (t.type == Token::SEMI) {
+        lex.consume(Token::SEMI);
+        t = lex.peek();
+      } else
+        break;
+      
+      if (t.type == Token::RPAREN)
+        break;
     }
-  }
 }
 
-void Parser::parseFormalVariableDef() {
+void Parser::parseFormalType() {
   Token t = lex.peek();
   
   if (t.type == Token::OUTPUT) {
@@ -83,8 +79,6 @@ void Parser::parseFormalVariableDef() {
     default:
       assert(0 && "Invalid type!");
   }
-  
-  parseDefExpressions();
 }
 
 void Parser::parseShaderDefinition() {
