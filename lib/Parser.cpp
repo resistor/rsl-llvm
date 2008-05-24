@@ -36,14 +36,22 @@ void Parser::parseFormals() {
   
   if (t.type != Token::RPAREN) {
     parseFormalVariableDef();
-    lex.consume(Token::SEMI);
     
-    t = lex.peek();
-  
-    while (t.type != Token::RPAREN) {
-      parseFormalVariableDef();
-      lex.consume(Token::SEMI);
+    if (lex.peek().type == Token::SEMI || lex.peek().type == Token::COMMA) {
+      lex.consume();
+    
       t = lex.peek();
+  
+      while (t.type != Token::RPAREN) {
+        parseFormalVariableDef();
+        
+        if (lex.peek().type == Token::SEMI || lex.peek().type == Token::COMMA) {
+          lex.consume();
+          t = lex.peek();
+        } else {
+          break;
+        }
+      }
     }
   }
 }
@@ -287,8 +295,10 @@ void Parser::parseIfStmt() {
   parseBlockBody();
   
   Token t = lex.peek();
-  if (t.type == Token::ELSE)
+  if (t.type == Token::ELSE) {
+    lex.consume(Token::ELSE);
     parseBlockBody();
+  }
 }
 
 void Parser::parseBlockBody() {
@@ -549,20 +559,7 @@ void Parser::parsePrimary() {
       parseTexture();
       break;
     case Token::LPAREN:
-      t2 = lex.peek(3);
-      
-      if (t2.type == Token::COMMA) {
-        t2 = lex.peek(7);
-        
-        if (t2.type == Token::RPAREN)
-          parseTuple(3);
-        else
-          parseTuple(16);
-      } else {
-        lex.consume(Token::LPAREN);
-        parseExpression();
-        lex.consume(Token::RPAREN);
-      }
+      parseTuple();
       break;
     case Token::IDENTIFIER:
       t2 = lex.peek(2);
@@ -627,15 +624,18 @@ void Parser::parseTextureArguments() {
   }
 }
 
-void Parser::parseTuple(unsigned num) {
+void Parser::parseTuple() {
   lex.consume(Token::LPAREN);
   
-  for (unsigned i = 0; i < num - 1; ++i) {
-    parseExpression();
-    lex.consume(Token::COMMA);
-  }
   
-  parseExpression();
+  while (1) {
+    parseExpression();
+    
+    if (lex.peek().type == Token::COMMA)
+      lex.consume(Token::COMMA);
+    else
+      break;
+  }
   
   lex.consume(Token::RPAREN);
 }

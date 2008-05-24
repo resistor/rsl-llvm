@@ -123,6 +123,15 @@ Token Lexer::LexNextToken() {
       return Token(Token::DOT, NextCharacter++, 1);
   case '^':
     return Token(Token::CARET, NextCharacter++, 1);
+  case '|':
+    NextCharacter++;
+    if (*(Buffer->getBufferStart() + NextCharacter) == '|')
+      return Token(Token::PIPEPIPE, (NextCharacter++)-1, 2);
+    else {
+      const char* Location = Buffer->getBufferStart() + NextCharacter;
+      return Token(Token::UNKNOWN, (NextCharacter++)-1, 2,
+                   SpellingPool.intern(Location, Location+2));
+    }
   case '&':
     NextCharacter++;
     if (*(Buffer->getBufferStart() + NextCharacter) == '&')

@@ -60,7 +60,7 @@ private:
   void parseTexture();
   void parseTextureType();
   void parseTextureArguments();
-  void parseTuple(unsigned num);
+  void parseTuple();
   void parseTypecast();
 };
 
