@@ -91,7 +91,8 @@ Token Lexer::consume(Token::TokenType t) {
 Token Lexer::LexNextToken() {
   while (*(Buffer->getBufferStart() + NextCharacter) == ' ' ||
          *(Buffer->getBufferStart() + NextCharacter) == '\n' ||
-         *(Buffer->getBufferStart() + NextCharacter) == '\t')
+         *(Buffer->getBufferStart() + NextCharacter) == '\t' ||
+         *(Buffer->getBufferStart() + NextCharacter) == '\r')
     NextCharacter++;
   
   unsigned start = 0;
