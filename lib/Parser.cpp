@@ -276,7 +276,10 @@ void Parser::parseIlluminanceLoop() {
 void Parser::parseSolarLoop() {
   lex.consume(Token::SOLAR);
   lex.consume(Token::LPAREN);
-  parseExpressionList();
+  
+  if (lex.peek().type != Token::RPAREN)
+    parseExpressionList();
+    
   lex.consume(Token::RPAREN);
   parseBlockBody();
 }
@@ -303,6 +306,17 @@ void Parser::parseBlockBody() {
     lex.consume(Token::RBRACE);
   } else {
     switch (t.type) {
+      case Token::FLOAT:
+      case Token::STRING:
+      case Token::COLOR:
+      case Token::POINT:
+      case Token::VECTOR:
+      case Token::NORMAL:
+      case Token::MATRIX:
+      case Token::UNIFORM:
+      case Token::VARYING:
+        parseVariableDecl();
+        break;
       case Token::IDENTIFIER:
         if (lex.peek(2).type == Token::LPAREN)
           parseCallStmt();
