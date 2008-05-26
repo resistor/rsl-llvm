@@ -1,5 +1,6 @@
 #include "llvm/Support/StringPool.h"
 #include <cstddef>
+#include <iostream>
 
 #ifndef RSL_TOKEN_H
 #define RSL_TOKEN_H
@@ -97,6 +98,10 @@ struct Token {
   
   Token(TokenType t, size_t i, unsigned l, const llvm::PooledStringPtr& sp) :
         type(t), index(i), spelling(sp), length(l) { }
+  
+  void dump() {
+    std::cerr << "Token: '" << *spelling << "'" << std::endl;
+  }
 };
 
 #endif

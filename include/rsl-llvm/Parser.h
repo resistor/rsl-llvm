@@ -38,6 +38,7 @@ private:
   void parseBlockBody();
   
   void parseExpression();
+  void parseScalarExpression();
   void parseExpressionList();
   void parseDefExpressions();
   

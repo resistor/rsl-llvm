@@ -74,6 +74,10 @@ Token Lexer::consume() {
 Token Lexer::consume(Token::TokenType t) {
   if (token_queue.size()) {
     Token tok = token_queue.front();
+    
+    if (tok.type != t)
+      tok.dump();
+    
     assert(tok.type == t && "Unexpected token encountered!");
     token_queue.pop_front();
     return tok;
@@ -254,7 +258,7 @@ Token Lexer::LexNumeric() {
   }
   
   // 1e+12
-  if ((*End == '+' || *End == '-') && (*(End+1) == 'E' || *(End+1) == 'e')) {
+  if ((*End == 'E' || *End == 'e') && (*(End+1) == '+' || *(End+1) == '-')) {
     End += 2;
     
     sawPeriod = false;

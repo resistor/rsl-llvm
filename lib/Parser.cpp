@@ -346,8 +346,18 @@ void Parser::parseDefExpressions() {
   while (lex.peek().type == Token::IDENTIFIER) {
     lex.consume(Token::IDENTIFIER);
     
+    if (lex.peek().type == Token::LBRACKET) {
+      lex.consume(Token::LBRACKET);
+      
+      if (lex.peek().type != Token::RBRACKET)
+        parseExpression();
+      
+      lex.consume(Token::RBRACKET);
+    }
+    
     if (lex.peek().type == Token::EQUAL) {
       lex.consume(Token::EQUAL);
+      
       parseExpression();
     }
     
@@ -389,6 +399,18 @@ void Parser::parseAssignmentExpr() {
 }
 
 void Parser::parseExpression() {
+  Token t = lex.peek();
+  
+  if (t.type == Token::LBRACE) {
+    lex.consume(Token::LBRACE);
+    parseExpressionList();
+    lex.consume(Token::RBRACE);
+  } else {
+    parseScalarExpression();
+  }
+}
+
+void Parser::parseScalarExpression() {
   parseConditionalExpr();
   
   Token t = lex.peek();
@@ -531,14 +553,14 @@ void Parser::parseExpressionList() {
   Token t = lex.peek();
   while (t.type == Token::COMMA) {
     lex.consume(Token::COMMA);
-    parseExpression();
+    parseScalarExpression();
     t = lex.peek();
   }
 }
 
 void Parser::parsePrimary() {
   Token t = lex.peek();
-  Token t2 = lex.peek();
+  Token t2 = lex.peek(2);
   
   switch (t.type) {
     case Token::NUMERIC:
