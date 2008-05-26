@@ -304,7 +304,10 @@ void Parser::parseBlockBody() {
   } else {
     switch (t.type) {
       case Token::IDENTIFIER:
-        parseAssignmentStmt();
+        if (lex.peek(2).type == Token::LPAREN)
+          parseCallStmt();
+        else
+          parseAssignmentStmt();
         break;
       case Token::SEMI:
         lex.consume(Token::SEMI);
