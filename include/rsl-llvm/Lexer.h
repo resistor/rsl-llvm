@@ -117,10 +117,7 @@ public:
   
   void computeLineNumbers();
   
-  unsigned getLineNumber(size_t pos) {
-    return std::lower_bound(SourceLineCache,
-                            SourceLineCache+NumLines, pos) - SourceLineCache;
-  }
+  unsigned getLineNumber(size_t pos);
   
   Token peek(unsigned LookAhead = 1);
   Token consume(Token::TokenType t);

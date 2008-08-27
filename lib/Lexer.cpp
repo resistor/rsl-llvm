@@ -283,3 +283,7 @@ Token Lexer::LexNumeric() {
   return Token(Token::NUMERIC, index, size, SpellingPool.intern(Start, End));
 }
 
+unsigned Lexer::getLineNumber(size_t pos) {
+  return std::lower_bound(SourceLineCache,
+                          SourceLineCache+NumLines, pos) - SourceLineCache;
+}

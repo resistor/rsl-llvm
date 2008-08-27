@@ -38,30 +38,17 @@ private:
   void parseBlockBody();
   
   void parseExpression();
-  void parseScalarExpression();
-  void parseExpressionList();
-  void parseDefExpressions();
+  void parseRHS(unsigned MinPrec);
   
   void parseCallExpr();
   void parseAssignmentExpr();
   void parseUnaryExpr();
   void parseArrayExpr();
   void parseCastExpr();
-  void parseDotExpr();
-  void parseMulExpr();
-  void parsePowExpr();
-  void parseAddExpr();
-  void parseCmpExpr();
-  void parseEqualityExpr();
-  void parseAndExpr();
-  void parseOrExpr();
-  void parseConditionalExpr();
   
   void parsePrimary();
   void parseTexture();
   void parseTextureType();
-  void parseTextureArguments();
-  void parseTuple();
   void parseTypecast();
 };
 

@@ -37,7 +37,7 @@ void Parser::parseFormals() {
   if (t.type != Token::RPAREN)
     while (1) {
       parseFormalType();
-      parseDefExpressions();
+      parseExpression();
     
       t = lex.peek();
       
@@ -202,12 +202,11 @@ void Parser::parseVariableDecl() {
     }
   }
   
-  parseDefExpressions();
+  parseExpression();
   lex.consume(Token::SEMI);
 }
 
 void Parser::parseAssignmentStmt() {
-  parseConditionalExpr();
   parseAssignmentExpr();
   lex.consume(Token::SEMI);
 }
@@ -260,7 +259,7 @@ void Parser::parseForLoop() {
 void Parser::parseIlluminateLoop() {
   lex.consume(Token::ILLUMINATE);
   lex.consume(Token::LPAREN);
-  parseExpressionList();
+  parseExpression();
   lex.consume(Token::RPAREN);
   parseBlockBody();
 }
@@ -268,7 +267,7 @@ void Parser::parseIlluminateLoop() {
 void Parser::parseIlluminanceLoop() {
   lex.consume(Token::ILLUMINANCE);
   lex.consume(Token::LPAREN);
-  parseExpressionList();
+  parseExpression();
   lex.consume(Token::RPAREN);
   parseBlockBody();
 }
@@ -278,7 +277,7 @@ void Parser::parseSolarLoop() {
   lex.consume(Token::LPAREN);
   
   if (lex.peek().type != Token::RPAREN)
-    parseExpressionList();
+    parseExpression();
     
   lex.consume(Token::RPAREN);
   parseBlockBody();
@@ -359,182 +358,125 @@ void Parser::parseBlockBody() {
   }
 }
 
-void Parser::parseDefExpressions() {
-  while (lex.peek().type == Token::IDENTIFIER) {
-    lex.consume(Token::IDENTIFIER);
+namespace Precedence {
+  enum Level {
+    Unknown        = 0,    // Not binary operator.
+    Comma          = 1,    // ,
+    Assignment     = 2,    // =, *=, /=, +=, -=
+    Conditional    = 3,    // ? (: is handled specially)
+    LogicalOr      = 4,    // ||
+    LogicalAnd     = 5,    // &&
+    Equality       = 6,    // ==, !=
+    Relational     = 7,   //  >=, <=, >, <
+    Cross          = 8,    // ^
+    Additive       = 9,   // -, +
+    Multiplicative = 10,   // *, /
+    Dot            = 11
+  };
+}
+
+static Precedence::Level getOperatorPrecedence(Token t) {
+  switch (t.type) {
+    default:                   return Precedence::Unknown;
+    case Token::COMMA:         return Precedence::Comma;
+    case Token::EQUAL:
+    case Token::STAREQUAL:
+    case Token::SLASHEQUAL:
+    case Token::PLUSEQUAL:
+    case Token::MINUSEQUAL:    return Precedence::Assignment;
+    case Token::QUESTION:      return Precedence::Conditional;
+    case Token::PIPEPIPE:      return Precedence::LogicalOr;
+    case Token::AMPAMP:        return Precedence::LogicalAnd;
+    case Token::EQUALEQUAL:
+    case Token::EXCLAIMEQUAL:  return Precedence::Equality;
+    case Token::GREATEREQUAL:
+    case Token::LESSEQUAL:
+    case Token::GREATER:
+    case Token::LESS:          return Precedence::Relational;
+    case Token::CARET:         return Precedence::Cross;
+    case Token::PLUS:
+    case Token::MINUS:         return Precedence::Additive;
+    case Token::STAR:
+    case Token::SLASH:         return Precedence::Multiplicative;
+    case Token::DOT:           return Precedence::Dot;
+  }
+}
+
+void Parser::parseExpression() {
+  /* LHS = */parseUnaryExpr();
+  parseRHS(/* LHS, */ Precedence::Comma);
+}
+
+void Parser::parseAssignmentExpr() {
+  /* LHS = */parseUnaryExpr();
+  parseRHS(/* LHS, */ Precedence::Assignment);
+}
+
+void Parser::parseRHS(/* ASTNode* LHS, */ unsigned MinPrec) {
+  unsigned NextTokPrec = getOperatorPrecedence(lex.peek());
+  
+  while (1) {
+    // If this token has a lower precedence than we are allowed to parse (e.g.
+    // because we are called recursively, or because the token is not a binop),
+    // then we are done!
+    if (NextTokPrec < MinPrec)
+      return /* LHS */;
     
-    if (lex.peek().type == Token::LBRACKET) {
-      lex.consume(Token::LBRACKET);
+    // Consume the operator, saving the operator token for error reporting.
+    Token OpToken = lex.peek();
+    lex.consume();
+    
+    // Special case handling for the ternary operator
+    /* ASTNode* TernaryMiddle = 0 */
+    if (NextTokPrec == Precedence::Conditional) {
+      if (lex.peek().type != Token::COLON)
+        /* TernaryMiddle = */ parseExpression();
       
-      if (lex.peek().type != Token::RBRACKET)
-        parseExpression();
-      
-      lex.consume(Token::RBRACKET);
+      // Eat the colon
+      lex.consume(Token::COLON);
     }
     
-    if (lex.peek().type == Token::EQUAL) {
-      lex.consume(Token::EQUAL);
-      
-      parseExpression();
-    }
+    // Parse another leaf here for the RHS of the operator.
+    /* ASTNode* RHS = */ parseUnaryExpr();
     
-    if (lex.peek().type == Token::COMMA)
-      lex.consume(Token::COMMA);
+    // Remember the precedence of this operator and get the precedence of the
+    // operator immediately to the right of the RHS.
+    unsigned ThisPrec = NextTokPrec;
+    NextTokPrec = getOperatorPrecedence(lex.peek());
+    
+    // Assignment and conditional expressions are right-associative.
+    bool isRightAssoc = ThisPrec == Precedence::Conditional ||
+                        ThisPrec == Precedence::Assignment;
+    
+    // Get the precedence of the operator to the right of the RHS.  If it binds
+    // more tightly with RHS than we do, evaluate it completely first.
+    if (ThisPrec < NextTokPrec ||
+        (ThisPrec == NextTokPrec && isRightAssoc)) {
+      // If this is left-associative, only parse things on the RHS that bind
+      // more tightly than the current operator.  If it is left-associative, it
+      // is okay, to bind exactly as tightly.  For example, compile A=B=C=D as
+      // A=(B=(C=D)), where each paren is a level of recursion here.
+      /* RHS =*/ parseRHS(/* RHS, */ ThisPrec + !isRightAssoc);
+
+      NextTokPrec = getOperatorPrecedence(lex.peek());
+    }
+    assert(NextTokPrec <= ThisPrec && "Recursion didn't work!");
+    
+    /*
+    if (TernaryMiddle)
+      LHS = new TernaryASTNode(LHS, TernaryMiddle, RHS);
     else
-      break;
+      LHS = new ASTNode(OpToken, LHS, RHS);
+    */
   }
 }
 
 void Parser::parseCallExpr() {
   lex.consume(Token::IDENTIFIER);
   lex.consume(Token::LPAREN);
-  
-  while (lex.peek().type != Token::RPAREN) {
+  if (lex.peek().type != Token::RPAREN)
     parseExpression();
-    if (lex.peek().type != Token::RPAREN)
-      lex.consume(Token::COMMA);
-  }
-  
   lex.consume(Token::RPAREN);
-}
-
-void Parser::parseAssignmentExpr() {
-  Token t = lex.peek();
-  switch (t.type) {
-    case Token::EQUAL:
-    case Token::PLUSEQUAL:
-    case Token::MINUSEQUAL:
-    case Token::STAREQUAL:
-    case Token::SLASHEQUAL:
-      lex.consume();
-      break;
-    default:
-      assert(0 && "Expected assignment operator!");
-  }
-  
-  parseExpression();
-}
-
-void Parser::parseExpression() {
-  Token t = lex.peek();
-  
-  if (t.type == Token::LBRACE) {
-    lex.consume(Token::LBRACE);
-    parseExpressionList();
-    lex.consume(Token::RBRACE);
-  } else {
-    parseScalarExpression();
-  }
-}
-
-void Parser::parseScalarExpression() {
-  parseConditionalExpr();
-  
-  Token t = lex.peek();
-  switch (t.type) {
-    case Token::EQUAL:
-    case Token::PLUSEQUAL:
-    case Token::MINUSEQUAL:
-    case Token::STAREQUAL:
-    case Token::SLASHEQUAL:
-      lex.consume();
-      parseExpression();
-    default:
-      break;
-  }
-}
-
-void Parser::parseConditionalExpr() {
-  parseOrExpr();
-  
-  Token t = lex.peek();
-  if (t.type == Token::QUESTION) {
-    lex.consume(Token::QUESTION);
-    parseConditionalExpr();
-    lex.consume(Token::COLON);
-    parseConditionalExpr();
-  }
-}
-
-void Parser::parseOrExpr() {
-  parseAndExpr();
-  
-  Token t = lex.peek();
-  if (t.type == Token::PIPEPIPE) {
-    lex.consume(Token::PIPEPIPE);
-    parseOrExpr();
-  }
-}
-
-void Parser::parseAndExpr() {
-  parseEqualityExpr();
-  
-  Token t = lex.peek();
-  if (t.type == Token::AMPAMP) {
-    lex.consume(Token::AMPAMP);
-    parseAndExpr();
-  }
-}
-
-void Parser::parseEqualityExpr() {
-  parseCmpExpr();
-  
-  Token t = lex.peek();
-  if (t.type == Token::EQUALEQUAL || t.type == Token::EXCLAIMEQUAL) {
-    lex.consume();
-    parseEqualityExpr();
-  }
-}
-
-void Parser::parseCmpExpr() {
-  parseAddExpr();
-  
-  Token t = lex.peek();
-  if (t.type == Token::GREATER || t.type == Token::GREATEREQUAL ||
-      t.type == Token::LESS || t.type == Token::LESSEQUAL) {
-    lex.consume();
-    parseCmpExpr();
-  }
-}
-
-void Parser::parseAddExpr() {
-  parsePowExpr();
-  
-  Token t = lex.peek();
-  if (t.type == Token::PLUS || t.type == Token::MINUS) {
-    lex.consume();
-    parseAddExpr();
-  }
-}
-
-void Parser::parsePowExpr() {
-  parseMulExpr();
-  
-  Token t = lex.peek();
-  if (t.type == Token::CARET) {
-    lex.consume(Token::CARET);
-    parsePowExpr();
-  }
-}
-
-void Parser::parseMulExpr() {
-  parseDotExpr();
-  
-  Token t = lex.peek();
-  if (t.type == Token::STAR || t.type == Token::SLASH) {
-    lex.consume();
-    parseMulExpr();
-  }
-}
-
-void Parser::parseDotExpr() {
-  parseUnaryExpr();
-  
-  Token t = lex.peek();
-  if (t.type == Token::DOT) {
-    lex.consume(Token::DOT);
-    parseDotExpr();
-  }
 }
 
 void Parser::parseUnaryExpr() {
@@ -564,16 +506,6 @@ void Parser::parseCastExpr() {
   parsePrimary();
 }
 
-void Parser::parseExpressionList() {
-  parseExpression();
-  
-  Token t = lex.peek();
-  while (t.type == Token::COMMA) {
-    lex.consume(Token::COMMA);
-    parseScalarExpression();
-    t = lex.peek();
-  }
-}
 
 void Parser::parsePrimary() {
   Token t = lex.peek();
@@ -592,7 +524,14 @@ void Parser::parsePrimary() {
       parseTexture();
       break;
     case Token::LPAREN:
-      parseTuple();
+      lex.consume();
+      parseExpression();
+      lex.consume(Token::RPAREN);
+      break;
+    case Token::LBRACE:
+      lex.consume();
+      parseExpression();
+      lex.consume(Token::RBRACE);
       break;
     case Token::IDENTIFIER:
       t2 = lex.peek(2);
@@ -611,7 +550,8 @@ void Parser::parsePrimary() {
 void Parser::parseArrayExpr() {
   lex.consume(Token::IDENTIFIER);
   lex.consume(Token::LBRACKET);
-  parseExpression();
+  if (lex.peek().type != Token::RBRACKET)
+    parseExpression();
   lex.consume(Token::RBRACKET);
 }
 
@@ -619,18 +559,6 @@ void Parser::parseTexture() {
   parseTextureType();
   lex.consume(Token::LPAREN);
   parseExpression();
-  
-  Token t = lex.peek();
-  if (t.type == Token::LBRACKET) {
-    lex.consume(Token::LBRACKET);
-    parseExpression();
-    lex.consume(Token::RBRACKET);
-  }
-  
-  t = lex.peek();
-  if (t.type == Token::COMMA)
-    parseTextureArguments();
-  
   lex.consume(Token::RPAREN);
 }
 
@@ -645,32 +573,6 @@ void Parser::parseTextureType() {
     lex.consume(Token::SHADOW);
   else
     assert(0 && "Invalid texture type!");
-}
-
-void Parser::parseTextureArguments() {
-  Token t = lex.peek();
-  
-  if (t.type == Token::COMMA) {
-    lex.consume(Token::COMMA);
-    parseExpression();
-    parseTextureArguments();
-  }
-}
-
-void Parser::parseTuple() {
-  lex.consume(Token::LPAREN);
-  
-  
-  while (1) {
-    parseExpression();
-    
-    if (lex.peek().type == Token::COMMA)
-      lex.consume(Token::COMMA);
-    else
-      break;
-  }
-  
-  lex.consume(Token::RPAREN);
 }
 
 void Parser::parseTypecast() {
